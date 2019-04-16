@@ -1,0 +1,181 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Data;
+using System.Data.Sql;
+using System.Data.SqlClient;
+using System.Windows.Forms;
+
+namespace SIRE_TICKETS
+{
+    public class Conexion
+    {
+        public SqlConnection cn;
+        public SqlCommand cm;
+        public DataTable dt;
+        public SqlDataAdapter da;
+
+        public Conexion()
+        {
+            try{
+                cn = new SqlConnection("Data Source=LAPTOP-TPIL51M5;Initial Catalog=SIRE_TICKETS;User ID=sa;Password=11julio1994");
+                cn.Open();
+                //MessageBox.Show("Conexión establecida");
+            }
+               catch (Exception ex)
+            {
+                MessageBox.Show("No se pudo conectar con la base de datos: " + ex);
+            }
+        }
+        public string insertar_empresa(String nombre, String Pater, String Mater, String Tipo_Pers, String RFC, String NomEmpresa, String Giro_Emp, String CP, String URL,
+            String Calle, String Entre_Calle, String Num_Inter, String Num_Exter, String Pais, String Estado, String Ciudad, String Telefono, String Tel_Ofic, String Tel_Movil, String Email,
+            String Usuario, String Pass, String CveSIREver, Boolean bandera = false)
+        {
+            String M = "Empresa registrada correctamente";
+            String comando = "";
+            DialogResult mensaje = new DialogResult();
+            try
+            {
+                if (this.valida_sihayusuarios())
+                {
+                    mensaje = MessageBox.Show("Ya hay usuarios registrados. ¿Desea continuar? Tome en cuenta que se eliminará el registro anterior", "SIRE Tickets", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                    if (mensaje == DialogResult.Yes)
+                    {
+                        comando = "TRUNCATE TABLE CLIENTES";
+                        cm = new SqlCommand(comando, cn);
+                        cm.ExecuteNonQuery();
+                    }
+                }
+                comando = "";
+                comando = "INSERT INTO CLIENTES (Nombre, Pater, Mater, Tipo_Persona, RFC, NomEmpresa, Giro_Emp, CP, URL, Calle, Entre_Calle, Num_Inter, Num_Exter, ";
+                comando = comando + "Cve_Pais, CveEst, Ciudad, Telefono,Tel_Ofic, Tel_Movil, Email, Fecha_Alta, CveSIREVer, Usuario, Pass)";
+                comando = comando + " VALUES ";
+                comando = comando + "('" + nombre + "','" + Pater + "','" + Mater + "','" + Tipo_Pers + "','" + RFC + "','" + NomEmpresa + "','";
+                comando = comando + Giro_Emp + "','" + CP + "','" + URL + "','" + Calle + "','" + Entre_Calle + "','" + Num_Inter + "','";
+                comando = comando + Num_Exter + "','" + Pais + "','" + Estado + "','" + Ciudad + "','" + Telefono + "','" + Tel_Ofic + "','";
+                comando = comando + Tel_Movil + "','" + Email + "','" + DateTime.Now.ToString("yyyy-MM-dd hh:mm.ss") + "','" + CveSIREver + "','" + Usuario + "','" + Pass + "')";
+                cm = new SqlCommand(comando, cn);
+                cm.ExecuteNonQuery();
+
+            }
+            catch (Exception e)
+            {
+                M = "No pudo registrarse la empresa: " + e;
+            }
+            return M;
+        }
+        public Boolean valida_sihayusuarios()
+        {
+            Boolean salida = false;
+            DataSet datos = new DataSet();
+            try
+            {
+                da = new SqlDataAdapter("SELECT TOP 5 * FROM CLIENTES", cn);
+                dt = new DataTable();
+                da.Fill(dt);
+                if (dt.Rows.Count > 0)
+                    salida = true;
+                else
+                    salida = false;
+            }
+            catch (Exception e)
+            {
+                salida = false;
+            }
+            return salida;
+        }
+        public Boolean login(string usuario, string contrasena)
+        {
+            Boolean salida = false;
+            da = new SqlDataAdapter("SELECT TOP 1 * FROM CLIENTES WHERE Usuario = '" + usuario + "' AND Pass = '" + contrasena + "'", cn);
+            dt = new DataTable();
+            da.Fill(dt);
+            if (dt.Rows.Count > 0)
+                salida = true;
+            else
+                salida = false;
+            return salida;
+        }
+        public string registraincidencia(String FechaInc, String BreveInc, String Hora, String Descripcion, String IncPriori, String CveClie,
+            String Cve_Modulo, String Cve_SubModulo, String Id_Release)
+        {
+            String M = "Los cambios se guardaron correctamente";
+            String comando = "";
+            try
+            {
+                comando = "INSERT INTO INCIDENCIAS (FechaInc, BreveInc, Hora, Descripcion, IncPriori, CveClie, Fecha_Alta, Hora_Alta, Cve_Modulo, Cve_SubModulo, Id_Release, Cve_Cliente)";
+                comando = comando + " VALUES ";
+                comando = comando + "('" + FechaInc + "','" + BreveInc + "','" + Hora + "','" + Descripcion + "'," + IncPriori + "," + CveClie + ",'";
+                comando = comando + FechaInc + "','" + Hora + "','" + Cve_Modulo + "','" + Cve_SubModulo + "'," + Id_Release + "," + CveClie + ")";
+                cm = new SqlCommand(comando, cn);
+                cm.ExecuteNonQuery();
+            }
+            catch (Exception e)
+            {
+                M = "No pudo ingresarse la incidencia, revise los datos que ha ingresado o consulte a soporte técnico: " + e;
+            }
+            return M;
+        }
+        public string poblarincidencias(String nomax, DataGridView dgv)
+        {
+            String resultado = "";
+            try
+            {
+                da = new SqlDataAdapter("SELECT TOP " + nomax + " CveInc, BreveInc, IncPriori, Fecha_Alta, Cve_Modulo From INCIDENCIAS", cn);
+                dt = new DataTable();
+                da.Fill(dt);
+                dgv.DataSource = dt;
+            }
+            catch (Exception e)
+            {
+                resultado = "No fue posible mostrar las incidencias: " + e;
+            }
+            return resultado;
+        }
+        public String eliminainc(String incidencia)
+        {
+            string resultado = "";
+            string comando = "";
+            try
+            {
+                comando = "DELETE FROM INCIDENCIAS WHERE CveInc = '" + incidencia + "'";
+                cm = new SqlCommand(comando, cn);
+                cm.ExecuteNonQuery();
+                resultado = "Registro eliminado correctamente";
+            }
+            catch (Exception e)
+            {
+                resultado = "No se pudo eliminar el registro: " + e;
+            }
+            return resultado;
+        }
+        public string pobladetalleinc(string incidencia)
+        {
+            string consulta;
+            registroincidencia frm = new registroincidencia();
+            string resultado = "";
+            try
+            {
+                consulta = "SELECT CveInc, BreveInc, Descripcion, IncPriori, Fecha_Alta, Cve_Modulo, Cve_SubModulo, Id_Release From INCIDENCIAS ";
+                consulta = consulta + "WHERE CveInc = '" + incidencia + "'";
+                da = new SqlDataAdapter(consulta, cn);
+                dt = new DataTable();
+                da.Fill(dt);
+                frm.llenacampos(dt.Rows[0]["BreveInc"].ToString(), dt.Rows[0]["Descripcion"].ToString(), dt.Rows[0]["Cve_Modulo"].ToString(), dt.Rows[0]["Cve_SubModulo"].ToString(), dt.Rows[0]["IncPriori"].ToString(), dt.Rows[0]["Id_Release"].ToString(), dt.Rows[0]["Fecha_Alta"].ToString());
+                frm.bandera = true;
+                frm.Text = "Registro de incidencias número: " + dt.Rows[0]["CveInc"].ToString();
+                frm.escondebotones();
+                frm.ShowDialog();
+                resultado = "";
+            }
+            catch (Exception e)
+            {
+                resultado = "No se pudieron cargar los resultados" + e;
+
+            }
+            return resultado;
+        }
+    }
+}
